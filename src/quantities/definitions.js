@@ -298,20 +298,20 @@ function validateUnitDefinition(unitDef, definition) {
   var denominator = definition[4] || [];
   if (!isNumber(scalar)) {
     throw new QtyError(unitDef + ": Invalid unit definition. " +
-                       "'scalar' must be a number");
+        "'scalar' must be a number");
   }
 
   numerator.forEach(function(unit) {
     if (UNITS[unit] === undefined) {
       throw new QtyError(unitDef + ": Invalid unit definition. " +
-                         "Unit " + unit + " in 'numerator' is not recognized");
+          "Unit " + unit + " in 'numerator' is not recognized");
     }
   });
 
   denominator.forEach(function(unit) {
     if (UNITS[unit] === undefined) {
       throw new QtyError(unitDef + ": Invalid unit definition. " +
-                         "Unit " + unit + " in 'denominator' is not recognized");
+          "Unit " + unit + " in 'denominator' is not recognized");
     }
   });
 }
@@ -321,9 +321,11 @@ export var PREFIX_MAP = {};
 export var UNIT_VALUES = {};
 export var UNIT_MAP = {};
 export var OUTPUT_MAP = {};
-for (var unitDef in UNITS) {
-  if (UNITS.hasOwnProperty(unitDef)) {
-    var definition = UNITS[unitDef];
+
+export function defineUnit(unitDef, definition, isBase) {
+  let oldDef = UNITS[unitDef];
+  try {
+    UNITS[unitDef] = definition;
     if (definition[2] === "prefix") {
       PREFIX_VALUES[unitDef] = definition[1];
       for (var i = 0; i < definition[0].length; i++) {
@@ -340,8 +342,24 @@ for (var unitDef in UNITS) {
       for (var j = 0; j < definition[0].length; j++) {
         UNIT_MAP[definition[0][j]] = unitDef;
       }
+      if (isBase) {
+        if (BASE_UNITS.indexOf(unitDef) === -1) {
+          BASE_UNITS.push(unitDef);
+        }
+      }
     }
     OUTPUT_MAP[unitDef] = definition[0][0];
+  }
+  catch (e) {
+    UNITS[unitDef] = oldDef;
+    throw e;
+  }
+}
+
+for (var unitDef in UNITS) {
+  if (UNITS.hasOwnProperty(unitDef)) {
+    var definition = UNITS[unitDef];
+    defineUnit(unitDef, definition);
   }
 }
 

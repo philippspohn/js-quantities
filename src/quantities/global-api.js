@@ -4,6 +4,7 @@ import {
   mulSafe
 } from "./utils.js";
 import {
+  defineUnit,
   getAliases,
   getUnits
 } from "./definitions.js";
@@ -15,6 +16,7 @@ import Qty from "./constructor.js";
 
 Qty.parse = globalParse;
 
+Qty.defineUnit = defineUnit;
 Qty.getUnits = getUnits;
 Qty.getAliases = getAliases;
 

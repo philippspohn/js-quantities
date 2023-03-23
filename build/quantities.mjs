@@ -377,13 +377,14 @@ var UNITS = {
   "<oersted>"  : [["Oe","oersted","oersteds"], 250.0 / Math.PI, "magnetism", ["<ampere>"], ["<meter>"]],
 
   /* energy */
-  "<joule>" :  [["J","joule","Joule","joules"], 1.0, "energy", ["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
+  "<joule>" :  [["J","joule","Joule","joules","Joules"], 1.0, "energy", ["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
   "<erg>"   :  [["erg","ergs"], 1e-7, "energy", ["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
   "<btu>"   :  [["BTU","btu","BTUs"], 1055.056, "energy", ["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
   "<calorie>" :  [["cal","calorie","calories"], 4.18400, "energy",["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
   "<Calorie>" :  [["Cal","Calorie","Calories"], 4184.00, "energy",["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
   "<therm-US>" : [["th","therm","therms","Therm","therm-US"], 105480400, "energy",["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
   "<Wh>" : [["Wh"], 3600, "energy",["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
+  "<electronvolt>" : [["eV", "electronvolt", "electronvolts"], 1.602176634E-19, "energy", ["<meter>","<meter>","<kilogram>"], ["<second>","<second>"]],
 
   /* force */
   "<newton>"  : [["N","Newton","newton"], 1.0, "force", ["<kilogram>","<meter>"], ["<second>","<second>"]],
@@ -396,6 +397,8 @@ var UNITS = {
   /* angle */
   "<radian>" :[["rad","radian","radians"], 1.0, "angle", ["<radian>"]],
   "<degree>" :[["deg","degree","degrees"], Math.PI / 180.0, "angle", ["<radian>"]],
+  "<arcminute>" :[["arcmin","arcminute","arcminutes"], Math.PI / 10800.0, "angle", ["<radian>"]],
+  "<arcsecond>" :[["arcsec","arcsecond","arcseconds"], Math.PI / 648000.0, "angle", ["<radian>"]],
   "<gradian>"   :[["gon","grad","gradian","grads"], Math.PI / 200.0, "angle", ["<radian>"]],
   "<steradian>"  : [["sr","steradian","steradians"], 1.0, "solid_angle", ["<steradian>"]],
 
@@ -454,7 +457,9 @@ var UNITS = {
   "<dozen>" :  [["doz","dz","dozen"],12.0,"prefix_only", ["<each>"]],
   "<percent>": [["%","percent"], 0.01, "prefix_only", ["<1>"]],
   "<ppm>" :  [["ppm"],1e-6, "prefix_only", ["<1>"]],
-  "<ppt>" :  [["ppt"],1e-9, "prefix_only", ["<1>"]],
+  "<ppb>" :  [["ppb"],1e-9, "prefix_only", ["<1>"]],
+  "<ppt>" :  [["ppt"],1e-12, "prefix_only", ["<1>"]],
+  "<ppq>" :  [["ppq"],1e-15, "prefix_only", ["<1>"]],
   "<gross>" :  [["gr","gross"],144.0, "prefix_only", ["<dozen>","<dozen>"]],
   "<decibel>"  : [["dB","decibel","decibels"], 1.0, "logarithmic", ["<decibel>"]]
 };
@@ -481,20 +486,20 @@ function validateUnitDefinition(unitDef, definition) {
   var denominator = definition[4] || [];
   if (!isNumber(scalar)) {
     throw new QtyError(unitDef + ": Invalid unit definition. " +
-                       "'scalar' must be a number");
+        "'scalar' must be a number");
   }
 
   numerator.forEach(function(unit) {
     if (UNITS[unit] === undefined) {
       throw new QtyError(unitDef + ": Invalid unit definition. " +
-                         "Unit " + unit + " in 'numerator' is not recognized");
+          "Unit " + unit + " in 'numerator' is not recognized");
     }
   });
 
   denominator.forEach(function(unit) {
     if (UNITS[unit] === undefined) {
       throw new QtyError(unitDef + ": Invalid unit definition. " +
-                         "Unit " + unit + " in 'denominator' is not recognized");
+          "Unit " + unit + " in 'denominator' is not recognized");
     }
   });
 }
@@ -504,9 +509,11 @@ var PREFIX_MAP = {};
 var UNIT_VALUES = {};
 var UNIT_MAP = {};
 var OUTPUT_MAP = {};
-for (var unitDef in UNITS) {
-  if (UNITS.hasOwnProperty(unitDef)) {
-    var definition = UNITS[unitDef];
+
+function defineUnit(unitDef, definition, isBase) {
+  let oldDef = UNITS[unitDef];
+  try {
+    UNITS[unitDef] = definition;
     if (definition[2] === "prefix") {
       PREFIX_VALUES[unitDef] = definition[1];
       for (var i = 0; i < definition[0].length; i++) {
@@ -523,8 +530,24 @@ for (var unitDef in UNITS) {
       for (var j = 0; j < definition[0].length; j++) {
         UNIT_MAP[definition[0][j]] = unitDef;
       }
+      if (isBase) {
+        if (BASE_UNITS.indexOf(unitDef) === -1) {
+          BASE_UNITS.push(unitDef);
+        }
+      }
     }
     OUTPUT_MAP[unitDef] = definition[0][0];
+  }
+  catch (e) {
+    UNITS[unitDef] = oldDef;
+    throw e;
+  }
+}
+
+for (var unitDef in UNITS) {
+  if (UNITS.hasOwnProperty(unitDef)) {
+    var definition = UNITS[unitDef];
+    defineUnit(unitDef, definition);
   }
 }
 
@@ -646,8 +669,8 @@ var INTEGER = "\\d+";
 var SIGNED_INTEGER = SIGN + "?" + INTEGER;
 var FRACTION = "\\." + INTEGER;
 var FLOAT = "(?:" + INTEGER + "(?:" + FRACTION + ")?" + ")" +
-            "|" +
-            "(?:" + FRACTION + ")";
+    "|" +
+    "(?:" + FRACTION + ")";
 var EXPONENT = "[Ee]" + SIGNED_INTEGER;
 var SCI_NUMBER = "(?:" + FLOAT + ")(?:" + EXPONENT + ")?";
 var SIGNED_NUMBER = SIGN + "?\\s*" + SCI_NUMBER;
@@ -661,6 +684,30 @@ var SAFE_POWER = "[01234]";
 var TOP_REGEX = new RegExp ("([^ \\*\\d]+?)(?:" + POWER_OP + ")?(-?" + SAFE_POWER + "(?![a-zA-Z]))");
 var BOTTOM_REGEX = new RegExp("([^ \\*\\d]+?)(?:" + POWER_OP + ")?(" + SAFE_POWER + "(?![a-zA-Z]))");
 
+function getRegexes() {
+  var PREFIX_REGEX = Object.keys(PREFIX_MAP).sort(function(a, b) {
+    return b.length - a.length;
+  }).join("|");
+  var UNIT_REGEX = Object.keys(UNIT_MAP).sort(function(a, b) {
+    return b.length - a.length;
+  }).join("|").replace("$", "\\$");
+
+  /*
+   * Minimal boundary regex to support units with Unicode characters
+   * \b only works for ASCII
+   */
+  var BOUNDARY_REGEX = "\\b|$";
+  var UNIT_MATCH = "(" + PREFIX_REGEX + ")??(" +
+      UNIT_REGEX +
+      ")(?:" + BOUNDARY_REGEX + ")";
+  var UNIT_TEST_REGEX = new RegExp("^\\s*(" + UNIT_MATCH + "[\\s\\*]*)+$");
+  var UNIT_MATCH_REGEX = new RegExp(UNIT_MATCH, "g"); // g flag for multiple occurences
+
+  return {
+    UNIT_TEST_REGEX,
+    UNIT_MATCH_REGEX
+  };
+}
 /* parse a string into a unit object.
  * Typical formats like :
  * "5.6 kg*m/s^2"
@@ -696,6 +743,8 @@ function parse(val) {
   var top = result[2];
   var bottom = result[3];
 
+  var regexes = getRegexes();
+
   var n, x, nx;
   // TODO DRY me
   while ((result = TOP_REGEX.exec(top))) {
@@ -705,7 +754,7 @@ function parse(val) {
       throw new QtyError("Unit exponent is not a number");
     }
     // Disallow unrecognized unit even if exponent is 0
-    if (n === 0 && !UNIT_TEST_REGEX.test(result[1])) {
+    if (n === 0 && !regexes.UNIT_TEST_REGEX.test(result[1])) {
       throw new QtyError("Unit not recognized");
     }
     x = result[1] + " ";
@@ -729,7 +778,7 @@ function parse(val) {
       throw new QtyError("Unit exponent is not a number");
     }
     // Disallow unrecognized unit even if exponent is 0
-    if (n === 0 && !UNIT_TEST_REGEX.test(result[1])) {
+    if (n === 0 && !regexes.UNIT_TEST_REGEX.test(result[1])) {
       throw new QtyError("Unit not recognized");
     }
     x = result[1] + " ";
@@ -749,22 +798,6 @@ function parse(val) {
   }
 }
 
-var PREFIX_REGEX = Object.keys(PREFIX_MAP).sort(function(a, b) {
-  return b.length - a.length;
-}).join("|");
-var UNIT_REGEX = Object.keys(UNIT_MAP).sort(function(a, b) {
-  return b.length - a.length;
-}).join("|");
-/*
- * Minimal boundary regex to support units with Unicode characters
- * \b only works for ASCII
- */
-var BOUNDARY_REGEX = "\\b|$";
-var UNIT_MATCH = "(" + PREFIX_REGEX + ")??(" +
-                 UNIT_REGEX +
-                 ")(?:" + BOUNDARY_REGEX + ")";
-var UNIT_TEST_REGEX = new RegExp("^\\s*(" + UNIT_MATCH + "[\\s\\*]*)+$");
-var UNIT_MATCH_REGEX = new RegExp(UNIT_MATCH, "g"); // g flag for multiple occurences
 var parsedUnitsCache = {};
 /**
  * Parses and converts units string to normalized unit array.
@@ -786,12 +819,13 @@ function parseUnits(units) {
 
   var unitMatch, normalizedUnits = [];
 
+  var regexes = getRegexes();
   // Scan
-  if (!UNIT_TEST_REGEX.test(units)) {
+  if (!regexes.UNIT_TEST_REGEX.test(units)) {
     throw new QtyError("Unit not recognized");
   }
 
-  while ((unitMatch = UNIT_MATCH_REGEX.exec(units))) {
+  while ((unitMatch = regexes.UNIT_MATCH_REGEX.exec(units))) {
     normalizedUnits.push(unitMatch.slice(1));
   }
 
@@ -1415,6 +1449,7 @@ function toBaseUnits(numerator,denominator) {
 
 Qty.parse = globalParse;
 
+Qty.defineUnit = defineUnit;
 Qty.getUnits = getUnits;
 Qty.getAliases = getAliases;
 
@@ -2003,4 +2038,4 @@ function simplify(units) {
 
 Qty.version = "1.7.6";
 
-export default Qty;
+export { Qty as default };
