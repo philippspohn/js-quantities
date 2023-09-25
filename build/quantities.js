@@ -566,7 +566,7 @@ SOFTWARE.
   var UNIT_MAP = {};
   var OUTPUT_MAP = {};
 
-  function defineUnit(unitDef, definition, isBase) {
+  function defineUnit(unitDef, definition, isBase, skipCompilingRegex = false) {
     let oldDef = UNITS[unitDef];
     try {
       UNITS[unitDef] = definition;
@@ -598,15 +598,18 @@ SOFTWARE.
       UNITS[unitDef] = oldDef;
       throw e;
     }
-    compileRegexes(PREFIX_MAP, UNIT_MAP);
+    if (!skipCompilingRegex) {
+      compileRegexes(PREFIX_MAP, UNIT_MAP);
+    }
   }
 
   for (var unitDef in UNITS) {
     if (UNITS.hasOwnProperty(unitDef)) {
       var definition = UNITS[unitDef];
-      defineUnit(unitDef, definition);
+      defineUnit(unitDef, definition, false, true); // isBase false, because already defined
     }
   }
+  compileRegexes(PREFIX_MAP, UNIT_MAP);
 
   /**
    * Returns a list of available units of kind
@@ -734,6 +737,11 @@ SOFTWARE.
    * 8 lbs 8 oz -- recognized as 8 lbs + 8 ounces
    */
   function parse(val) {
+    if (typeof val === "number" && isFinite(val)) {
+      this.scalar = val;
+      return;
+    }
+
     if (!isString(val)) {
       val = val.toString();
     }

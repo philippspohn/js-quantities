@@ -323,7 +323,7 @@ export var UNIT_VALUES = {};
 export var UNIT_MAP = {};
 export var OUTPUT_MAP = {};
 
-export function defineUnit(unitDef, definition, isBase) {
+export function defineUnit(unitDef, definition, isBase, skipCompilingRegex = false) {
   let oldDef = UNITS[unitDef];
   try {
     UNITS[unitDef] = definition;
@@ -355,15 +355,18 @@ export function defineUnit(unitDef, definition, isBase) {
     UNITS[unitDef] = oldDef;
     throw e;
   }
-  compileRegexes(PREFIX_MAP, UNIT_MAP);
+  if (!skipCompilingRegex) {
+    compileRegexes(PREFIX_MAP, UNIT_MAP);
+  }
 }
 
 for (var unitDef in UNITS) {
   if (UNITS.hasOwnProperty(unitDef)) {
     var definition = UNITS[unitDef];
-    defineUnit(unitDef, definition);
+    defineUnit(unitDef, definition, false, true); // isBase false, because already defined
   }
 }
+compileRegexes(PREFIX_MAP, UNIT_MAP);
 
 /**
  * Returns a list of available units of kind

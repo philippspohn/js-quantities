@@ -16,6 +16,11 @@ import {BOTTOM_REGEX, getRegexes, QTY_STRING_REGEX, TOP_REGEX} from "./regexes";
  * 8 lbs 8 oz -- recognized as 8 lbs + 8 ounces
  */
 export default function parse(val) {
+  if (typeof val === "number" && isFinite(val)) {
+    this.scalar = val;
+    return;
+  }
+
   if (!isString(val)) {
     val = val.toString();
   }
