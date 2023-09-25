@@ -1,5 +1,6 @@
 import { isNumber } from "./utils.js";
 import QtyError from "./error.js";
+import {compileRegexes} from "./regexes";
 
 export var UNITS = {
   /* prefixes */
@@ -354,6 +355,7 @@ export function defineUnit(unitDef, definition, isBase) {
     UNITS[unitDef] = oldDef;
     throw e;
   }
+  compileRegexes(PREFIX_MAP, UNIT_MAP);
 }
 
 for (var unitDef in UNITS) {

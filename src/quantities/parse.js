@@ -1,51 +1,8 @@
-import { isString } from "./utils.js";
+import {isString} from "./utils.js";
 import QtyError from "./error.js";
-import { PREFIX_MAP, UNIT_MAP } from "./definitions.js";
+import {PREFIX_MAP, UNIT_MAP} from "./definitions.js";
+import {BOTTOM_REGEX, getRegexes, QTY_STRING_REGEX, TOP_REGEX} from "./regexes";
 
-var SIGN = "[+-]";
-var INTEGER = "\\d+";
-var SIGNED_INTEGER = SIGN + "?" + INTEGER;
-var FRACTION = "\\." + INTEGER;
-var FLOAT = "(?:" + INTEGER + "(?:" + FRACTION + ")?" + ")" +
-    "|" +
-    "(?:" + FRACTION + ")";
-var EXPONENT = "[Ee]" + SIGNED_INTEGER;
-var SCI_NUMBER = "(?:" + FLOAT + ")(?:" + EXPONENT + ")?";
-var SIGNED_NUMBER = SIGN + "?\\s*" + SCI_NUMBER;
-var QTY_STRING = "(" + SIGNED_NUMBER + ")?" + "\\s*([^/]*)(?:\/(.+))?";
-var QTY_STRING_REGEX = new RegExp("^" + QTY_STRING + "$");
-
-var POWER_OP = "\\^|\\*{2}";
-// Allow unit powers representing scalar, length, area, volume; 4 is for some
-// special case representations in SI base units.
-var SAFE_POWER = "[01234]";
-var TOP_REGEX = new RegExp ("([^ \\*\\d]+?)(?:" + POWER_OP + ")?(-?" + SAFE_POWER + "(?![a-zA-Z]))");
-var BOTTOM_REGEX = new RegExp("([^ \\*\\d]+?)(?:" + POWER_OP + ")?(" + SAFE_POWER + "(?![a-zA-Z]))");
-
-function getRegexes() {
-  var PREFIX_REGEX = Object.keys(PREFIX_MAP).sort(function(a, b) {
-    return b.length - a.length;
-  }).join("|");
-  var UNIT_REGEX = Object.keys(UNIT_MAP).sort(function(a, b) {
-    return b.length - a.length;
-  }).join("|").replace("$", "\\$");
-
-  /*
-   * Minimal boundary regex to support units with Unicode characters
-   * \b only works for ASCII
-   */
-  var BOUNDARY_REGEX = "\\b|$";
-  var UNIT_MATCH = "(" + PREFIX_REGEX + ")??(" +
-      UNIT_REGEX +
-      ")(?:" + BOUNDARY_REGEX + ")";
-  var UNIT_TEST_REGEX = new RegExp("^\\s*(" + UNIT_MATCH + "[\\s\\*]*)+$");
-  var UNIT_MATCH_REGEX = new RegExp(UNIT_MATCH, "g"); // g flag for multiple occurences
-
-  return {
-    UNIT_TEST_REGEX,
-    UNIT_MATCH_REGEX
-  };
-}
 /* parse a string into a unit object.
  * Typical formats like :
  * "5.6 kg*m/s^2"
@@ -97,7 +54,7 @@ export default function parse(val) {
     }
     x = result[1] + " ";
     nx = "";
-    for (var i = 0; i < Math.abs(n) ; i++) {
+    for (var i = 0; i < Math.abs(n); i++) {
       nx += x;
     }
     if (n >= 0) {
@@ -121,7 +78,7 @@ export default function parse(val) {
     }
     x = result[1] + " ";
     nx = "";
-    for (var j = 0; j < n ; j++) {
+    for (var j = 0; j < n; j++) {
       nx += x;
     }
 
@@ -137,6 +94,7 @@ export default function parse(val) {
 }
 
 var parsedUnitsCache = {};
+
 /**
  * Parses and converts units string to normalized unit array.
  * Result is cached to speed up next calls.
@@ -172,7 +130,7 @@ function parseUnits(units) {
   });
 
   // Flatten and remove null elements
-  normalizedUnits = normalizedUnits.reduce(function(a,b) {
+  normalizedUnits = normalizedUnits.reduce(function(a, b) {
     return a.concat(b);
   }, []);
   normalizedUnits = normalizedUnits.filter(function(item) {
